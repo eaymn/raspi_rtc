@@ -1,3 +1,5 @@
+// initial code provided by Dr. derek M, as part of EE513 moulde assignment
+
 #include<stdio.h>
 #include<fcntl.h>
 #include<sys/ioctl.h>
@@ -5,8 +7,37 @@
 #include<linux/i2c-dev.h>
 #define BUFFER_SIZE 19      //0x00 to 0x12
 
+
+class RasRtc {
+	public:
+	void setDate(int,bType,bType,bType,bType,bType,bType,bType,int);
+	void getTemp(int);
+	int setYear(int ,int, int);
+	int setDayOfWeek(int ,int, int);
+	int setDateOfMonth(int ,int, int);
+	int setHours(int ,int, int);
+	int setSeconds(int, int, int);
+	int setMinutes(int ,int, int);
+	int setMonth(int ,int, int);
+	int getSeconds(int, int);
+	int getYear(int ,int);
+	int getDayOfWeek(int ,int);
+	int getDateOfMonth(int ,int);
+	int getHours(int ,int);
+	int getMinutes(int ,int);
+	int getMonth(int ,int);
+	void getDate(int,int);
+};
+
 // the time is in the registers in encoded decimal form
-int bcdToDec(char b) { return (b / 16) * 10 + (b % 16); }
+int bcdToDec(char bin_Value){
+    return ((bin_Value / 16 * 10) + (bin_Value % 16));
+
+}
+
+int decToBcd(char dec_Value){
+    return((dec_Value / 10 *16) + (dec_Value % 10));
+}
 
 int main() {
     int file;
