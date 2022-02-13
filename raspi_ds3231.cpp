@@ -142,7 +142,7 @@ public:
 
     void getTemp(int);
     void getDate(int, int);
-    void setDate(int, bType, bType, bType, bType, bType, bType, bType, int);
+   // void setDate(int, int, int;
 };
 
 int main() {
