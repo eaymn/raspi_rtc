@@ -1,5 +1,5 @@
 // Initial code provided by Dr. Derek Molloy, EE513 , 2021-2022
-// Additional references : Exploering RaspberryPi Handbook by Dr. Derek Molloy
+// Additional references : Exploering RaspberryPi Handbook by Dr. Derek Molloy, http://exploringrpi.com/chapter8/
 
 #include<stdio.h>
 #include<fcntl.h>
@@ -7,6 +7,12 @@
 #include<unistd.h>
 #include<linux/i2c.h>
 #include<linux/i2c-dev.h>
+#include<iomanip>
+#include<sys/ioctl.h>
+#include<sstream>
+#include<iostream>
+
+using namespace std;
 
 
 // Reference: Figure #1, page #11 DS3231 datasheet
@@ -22,6 +28,10 @@
 #define ds3231_tempLSBAdd 0x12
 
 #define BUFFER_SIZE 19      //0x00 to 0x12 , 19 register address
+
+
+#define I2C_0 "/dev/i2c-0"
+#define I2C_1 "/dev/i2c-1"
 
 //char used becuase of the 8 bits used in the register
 
@@ -47,15 +57,36 @@ public:
     virtual int open();
     virtual int write(unsigned char value);
     virtual unsigned char readRegister(unsigned int registerAddress);
-    virtual unsigned char* readRegisters(unsigned int number, unsigned int fromAddress = 0);
+    //virtual unsigned char* readRegisters(unsigned int number, unsigned int fromAddress = 0);
     virtual int writeRegister(unsigned int registerAddress, unsigned char value);
-    virtual void debugDumpRegisters(unsigned int number = 0xff);
+   //virtual void debugDumpRegisters(unsigned int number = 0xff);
     virtual void close();
     virtual ~I2CDevice();
+
+    int setSeconds();
+    int setMinutes();
+    int setHours();
+    int setDayOfWeek();
+    int setDateOfMonth();
+    int setMonth();
+    int setYear();
+
+    int getSeconds();
+    int getMinutes();
+    int getHours();
+    int getDayOfWeek();
+    int getDateOfMonth();
+    int getMonth();
+    int getYear();
+
+    void getTemp(int);
+    void getDate(int, int);
+   // void setDate(int, int, int;
 };
 
 // class constrcutor 
 I2CDevice::I2CDevice(unsigned int bus, unsigned int device) {
+    printf("Constrcutor called\n");
     this->file = -1;
     this->bus = bus;
     this->device = device;
@@ -63,6 +94,7 @@ I2CDevice::I2CDevice(unsigned int bus, unsigned int device) {
 }
 
 int I2CDevice::open() {
+    printf("Open Method called\n");
     string name;
     if (this->bus == 0) name = I2C_0;
     else name = I2C_1;
@@ -79,6 +111,7 @@ int I2CDevice::open() {
 }
 
 int I2CDevice::write(unsigned char value) {
+     printf("Write Method called\n");
     unsigned char buffer[1];
     buffer[0] = value;
     if (::write(this->file, buffer, 1) != 1) {
@@ -89,6 +122,7 @@ int I2CDevice::write(unsigned char value) {
 }
 
 int I2CDevice::writeRegister(unsigned int registerAddress, unsigned char value) {
+    printf("Write Reg Method called");
     unsigned char buffer[2];
     buffer[0] = registerAddress;
     buffer[1] = value;
@@ -100,6 +134,7 @@ int I2CDevice::writeRegister(unsigned int registerAddress, unsigned char value) 
 }
 
 unsigned char I2CDevice::readRegister(unsigned int registerAddress) {
+    printf("Read reg Method called\n");
     this->write(registerAddress);
     unsigned char buffer[1];
     if (::read(this->file, buffer, 1) != 1) {
@@ -120,61 +155,34 @@ I2CDevice::~I2CDevice() {
 }
 
 
-class RtcDs3231 :public I2CDevice {
+int I2CDevice::getSeconds(){
+    printf("Read_Sec Method called\n");
+     return I2CDevice::readRegister(0x00);
+}
+int I2CDevice::getMinutes(){
+    printf("Read_min Method called\n");
+     return I2CDevice::readRegister(0x01);
+}
+int I2CDevice::getHours(){
+    printf("Read_Hours Method called\n");
+     return I2CDevice::readRegister(0x02);
+}
 
-public:
-    RtcDs3231(unsigned int I2CBus, unsigned int I2CAddress = 0x68);
-    int setSeconds(int, int, int);
-    int setMinutes(int, int, int);
-    int setHours(int, int, int);
-    int setDayOfWeek(int, int, int);
-    int setDateOfMonth(int, int, int);
-    int setMonth(int, int, int);
-    int setYear(int, int, int);
-
-    int getSeconds(int, int);
-    int getMinutes(int, int);
-    int getHours(int, int);
-    int getDayOfWeek(int, int);
-    int getDateOfMonth(int, int);
-    int getMonth(int, int);
-    int getYear(int, int);
-
-    void getTemp(int);
-    void getDate(int, int);
-   // void setDate(int, int, int;
-};
+    int getMinutes();
+    int getHours();
+    int getDayOfWeek();
+    int getDateOfMonth();
+    int getMonth();
+    int getYear();
 
 int main() {
-    //int file;
-    //printf("Starting the DS3231 test application\n");
-    //if ((file = open("/dev/i2c-1", O_RDWR)) < 0) {
-    //    perror("failed to open the bus\n");
-    //    return 1;
-    //}
-    //if (ioctl(file, I2C_SLAVE, 0x68) < 0) {
-    //    perror("Failed to connect to the sensor\n");
-    //    return 1;
-    //}
-    //char writeBuffer[1] = { 0x00 };
-    //if (write(file, writeBuffer, 1) != 1) {
-    //    perror("Failed to reset the read address\n");
-    //    return 1;
-    //}
-    //char buf[BUFFER_SIZE];
-    //if (read(file, buf, BUFFER_SIZE) != BUFFER_SIZE) {
-    //    perror("Failed to read in the buffer\n");
-    //    return 1;
-    //}
-    //printf("The RTC time is %02d:%02d:%02d\n", bcdToDec(buf[2]),
-    //    bcdToDec(buf[1]), bcdToDec(buf[0]));
-
-    //float temperature = buf[0x11] + ((buf[0x12] >> 6) * 0.25);
-    //printf("The temperature is %f°C\n", temperature);
-
-    //close(file);
-
-    RtcDs3231 rtc(1, 0x68);
-
+    I2CDevice rtc(1, 0x68);
+    rtc.getSeconds();
+    rtc.getMinutes();
+    rtc.getHours();
+    char buf[BUFFER_SIZE];
+    printf("The RTC time is %02d:%02d:%02d\n", bcdToDec(buf[2]),
+        bcdToDec(buf[1]), bcdToDec(buf[0]));
+    rtc.close();
     return 0;
 }
