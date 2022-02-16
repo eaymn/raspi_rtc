@@ -57,24 +57,24 @@ public:
     virtual int open();
     virtual int write(unsigned char value);
     virtual unsigned char readRegister(unsigned int registerAddress);
-    //virtual unsigned char* readRegisters(unsigned int number, unsigned int fromAddress = 0);
+    virtual unsigned char* readRegisters(unsigned int number, unsigned int fromAddress = 0);
     virtual int writeRegister(unsigned int registerAddress, unsigned char value);
-   //virtual void debugDumpRegisters(unsigned int number = 0xff);
+    //virtual void debugDumpRegisters(unsigned int number = 0xff);
     virtual void close();
     virtual ~I2CDevice();
 
-    int setSeconds();
-    int setMinutes();
-    int setHours();
-    int setDayOfWeek();
-    int setDateOfMonth();
-    int setMonth();
-    int setYear();
+    int setSeconds(unsigned char value);
+    int setMinutes(unsigned char value);
+    int setHours(unsigned char value);
+    //int setDayOfWeek(unsigned char value);
+    int setDateOfMonth(unsigned char value);
+    int setMonth(unsigned char value);
+    int setYear(unsigned char value);
 
     int getSeconds();
     int getMinutes();
     int getHours();
-    int getDayOfWeek();
+    //int getDayOfWeek();
     int getDateOfMonth();
     int getMonth();
     int getYear();
@@ -94,7 +94,6 @@ I2CDevice::I2CDevice(unsigned int bus, unsigned int device) {
 }
 
 int I2CDevice::open() {
-    printf("Open Method called\n");
     string name;
     if (this->bus == 0) name = I2C_0;
     else name = I2C_1;
@@ -111,7 +110,6 @@ int I2CDevice::open() {
 }
 
 int I2CDevice::write(unsigned char value) {
-     printf("Write Method called\n");
     unsigned char buffer[1];
     buffer[0] = value;
     if (::write(this->file, buffer, 1) != 1) {
@@ -122,7 +120,6 @@ int I2CDevice::write(unsigned char value) {
 }
 
 int I2CDevice::writeRegister(unsigned int registerAddress, unsigned char value) {
-    printf("Write Reg Method called");
     unsigned char buffer[2];
     buffer[0] = registerAddress;
     buffer[1] = value;
@@ -134,7 +131,6 @@ int I2CDevice::writeRegister(unsigned int registerAddress, unsigned char value) 
 }
 
 unsigned char I2CDevice::readRegister(unsigned int registerAddress) {
-    printf("Read reg Method called\n");
     this->write(registerAddress);
     unsigned char buffer[1];
     if (::read(this->file, buffer, 1) != 1) {
@@ -142,6 +138,16 @@ unsigned char I2CDevice::readRegister(unsigned int registerAddress) {
         return 1;
     }
     return buffer[0];
+}
+unsigned char* I2CDevice::readRegisters(unsigned int number, unsigned int fromAddress){
+        this->write(fromAddress);
+        unsigned char* data = new unsigned char[number];
+    if(::read(this->file, data, number)!=(int)number){
+        perror("I2C: Failed to read in the full buffer.\n");
+        return NULL;
+    }
+        return data;
+    
 }
 
 void I2CDevice::close() {
@@ -154,35 +160,61 @@ I2CDevice::~I2CDevice() {
     if (file != -1) this->close();
 }
 
-
+//get methods
 int I2CDevice::getSeconds(){
-    printf("Read_Sec Method called\n");
      return I2CDevice::readRegister(0x00);
 }
 int I2CDevice::getMinutes(){
-    printf("Read_min Method called\n");
      return I2CDevice::readRegister(0x01);
 }
 int I2CDevice::getHours(){
-    printf("Read_Hours Method called\n");
      return I2CDevice::readRegister(0x02);
 }
-
-    int getMinutes();
-    int getHours();
-    int getDayOfWeek();
-    int getDateOfMonth();
-    int getMonth();
-    int getYear();
+int I2CDevice::getDateOfMonth(){
+     return I2CDevice::readRegister(0x04);
+}
+int I2CDevice::getMonth(){
+     return I2CDevice::readRegister(0x05);
+}
+int I2CDevice::getYear(){
+      return I2CDevice::readRegister(0x05);
+}
+//set methoods
+int I2CDevice::setSeconds(unsigned char value){
+     return I2CDevice::writeRegister(0x00, value);
+}
+int I2CDevice::setMinutes(unsigned char value){
+     return I2CDevice::writeRegister(0x01, value);
+}
+int I2CDevice::setHours(unsigned char value){
+     return I2CDevice::writeRegister(0x02, value);
+}
+int I2CDevice::setDateOfMonth(unsigned char value){
+     return I2CDevice::writeRegister(0x04, value);
+}
+int I2CDevice::setMonth(unsigned char value){
+     return I2CDevice::writeRegister(0x05, value);
+}
+int I2CDevice::setYear(unsigned char value){
+     return I2CDevice::writeRegister(0x06, value);
+}
 
 int main() {
     I2CDevice rtc(1, 0x68);
     rtc.getSeconds();
     rtc.getMinutes();
     rtc.getHours();
+    rtc.getDateOfMonth();
+    rtc.getMonth();
+    rtc.getYear();
     char buf[BUFFER_SIZE];
     printf("The RTC time is %02d:%02d:%02d\n", bcdToDec(buf[2]),
         bcdToDec(buf[1]), bcdToDec(buf[0]));
+    printf("The RTC date is %02d:%02d:%02d\n", bcdToDec(buf[4]),
+        bcdToDec(buf[5]), bcdToDec(buf[6]));
     rtc.close();
+    for (int i=0; i< BUFFER_SIZE; i++){
+        printf("%02x ", buf[i]);
+    }
     return 0;
 }
