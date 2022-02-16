@@ -181,26 +181,27 @@ int I2CDevice::getYear(){
 }
 //set methoods
 int I2CDevice::setSeconds(unsigned char value){
-     return I2CDevice::writeRegister(0x00, value);
+     return I2CDevice::writeRegister(0x00, decTobcd(value));
 }
 int I2CDevice::setMinutes(unsigned char value){
-     return I2CDevice::writeRegister(0x01, value);
+     return I2CDevice::writeRegister(0x01, decTobcd(value));
 }
 int I2CDevice::setHours(unsigned char value){
-     return I2CDevice::writeRegister(0x02, value);
+     return I2CDevice::writeRegister(0x02, decTobcd(value));
 }
 int I2CDevice::setDateOfMonth(unsigned char value){
-     return I2CDevice::writeRegister(0x04, value);
+     return I2CDevice::writeRegister(0x04, decTobcd(value));
 }
 int I2CDevice::setMonth(unsigned char value){
-     return I2CDevice::writeRegister(0x05, value);
+     return I2CDevice::writeRegister(0x05, decTobcd(value));
 }
 int I2CDevice::setYear(unsigned char value){
-     return I2CDevice::writeRegister(0x06, value);
+     return I2CDevice::writeRegister(0x06, decTobcd(value));
 }
 
 int main() {
     I2CDevice rtc(1, 0x68);
+    rtc.setHours(17);
     rtc.getSeconds();
     rtc.getMinutes();
     rtc.getHours();
