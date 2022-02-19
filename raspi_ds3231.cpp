@@ -67,13 +67,13 @@ public:
     int bcdToDec(char);
     int decTobcd(char);
 
-    int setSeconds(int value);
-    int setMinutes(int value);
-    int setHours(int value);
-    int setDofWeek(int value);
-    int setDateOfMonth(int value);
-    int setMonth(int value);
-    int setYear(int value);
+    int setSeconds(int);
+    int setMinutes(int);
+    int setHours(int);
+    int setDofWeek(int);
+    int setDateOfMonth(int);
+    int setMonth(int);
+    int setYear(int);
 
     int getSeconds();
     int getMinutes();
@@ -84,10 +84,9 @@ public:
     int getYear();
 
     void getTimeDate();
+    void setTimeDate(int, int, int, int, int, int);
     
     void getTemperature();
-    // void getDate();
-    // void setTimeDate();
 
     //void readAlarm1();
     //void readAlaam2();
@@ -185,8 +184,8 @@ void I2CDevice::getTimeDate(){
         printf("The RTC date is %02d/%02d/%02d\n", getDateOfMonth(), getMonth(), getYear());
 }
 void I2CDevice::getTemperature() {
-    unsigned char msb = I2CDevice::readRegister(0x11);
-	unsigned char lsb = I2CDevice::readRegister(0x12);
+    unsigned char msb = bcdToDec(I2CDevice::readRegister(0x11));
+	unsigned char lsb = bcdToDec(I2CDevice::readRegister(0x12));
     float rtcTemperature = msb + ((lsb >> 6) * 0.25);
     printf("The RTC Temperature is %f°C\n" , rtcTemperature);
 }
@@ -200,15 +199,14 @@ int I2CDevice::setDateOfMonth(int value) {return I2CDevice::writeRegister(0x04, 
 int I2CDevice::setMonth(int value) {return I2CDevice::writeRegister(0x05, decTobcd(value));}
 int I2CDevice::setYear(int value) {return I2CDevice::writeRegister(0x06, decTobcd(value));}
 
-// int I2CDevice::setTimeDate(unsigned char value) {
-//     setSeconds(in);
-//     setMinutes(int;
-//     setHours(int;
-//     setDayOfW(int)
-//     setDateOfMonth(int);
-//     setMonth(int;
-//     setYear(int;
-// }
+void I2CDevice::setTimeDate(int seconds, int minutes, int hours, int day, int month, int years) {
+    setSeconds(seconds);
+    setMinutes(minutes);
+    setHours(hours);
+    setDateOfMonth(day);
+    setMonth(month);
+    setYear(years);
+}
 
 int main() {
     printf("Starting the DS3231 test application\n");
@@ -216,6 +214,7 @@ int main() {
 
     I2CDevice rtc(0x68);
     rtc.readRegisters(BUFFER_SIZE,0x00);
+    rtc.setTimeDate(00, 00, 02, 19, 02, 2022);
     rtc.getTimeDate();
     rtc.getTemperature();
     rtc.close();
