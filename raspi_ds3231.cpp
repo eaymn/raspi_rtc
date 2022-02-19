@@ -34,25 +34,13 @@ using namespace std;
 #define ds3231_ala2_min 0x0b
 #define ds3231_ala2_hrs 0x0c
 #define ds3231_ala2_day 0x0d
-
-
-
-
-#define I2C_0 "/dev/i2c-0"
-#define I2C_1 "/dev/i2c-1"
+#define ds3231_control 0x0E
+#define ds3231_controlStatus 0x0F
+#define ds3231_aging 0x10
+#define ds3231_tempMSB 0x11
+#define ds3231_tempLSB 0x12
 
 //char used becuase of the 8 bits used in the register
-
-// the time is in the registers in encoded decimal form
-// Convert binary coded decimal to normal decimal numbers
-int bcdToDec(char binValue) {
-    return (binValue / 16) * 10 + (binValue % 16);
-}
-// Convert decimal to binary coded decimal
-int decTobcd(char decValue) {
-    return (decValue / 10) * 16 + (decValue % 10);
-}
-
 
 // Creating Main calss with main i2c device chacaterstics and menthods 
 class I2CDevice {
@@ -60,8 +48,13 @@ private:
     unsigned int bus;
     unsigned int device;
     int file;
+    unsigned char *registers;
+    int bcdToDec();
+    int decTobcd();
+
+
 public:
-    I2CDevice(unsigned int bus, unsigned int device);
+    I2CDevice(unsigned int device);
     virtual int open();
     virtual int write(unsigned char value);
     virtual unsigned char readRegister(unsigned int registerAddress);
@@ -71,54 +64,56 @@ public:
     virtual void close();
     virtual ~I2CDevice();
 
-    int setSeconds(unsigned char value);
-    int setMinutes(unsigned char value);
-    int setHours(unsigned char value);
-    //int setDayOfWeek(unsigned char value);
-    int setDateOfMonth(unsigned char value);
-    int setMonth(unsigned char value);
-    int setYear(unsigned char value);
+    int bcdToDec(char);
+    int decTobcd(char);
+
+    int setSeconds(int value);
+    int setMinutes(int value);
+    int setHours(int value);
+    int setDofWeek(int value);
+    int setDateOfMonth(int value);
+    int setMonth(int value);
+    int setYear(int value);
 
     int getSeconds();
     int getMinutes();
     int getHours();
-    //int getDayOfWeek();
+    int getDofWeek();
     int getDateOfMonth();
     int getMonth();
     int getYear();
 
-    // void getTemp();
+    void getTimeDate();
+    
+    void getTemperature();
     // void getDate();
     // void setTimeDate();
 
-    // void readAlarm1();
-    // void readAlaam2();
-    // void setAlaram(unsigned char)
+    //void readAlarm1();
+    //void readAlaam2();
+    //void setAlaram1();
+    //void setAlaram2()
 
-    //void sqwg(); // Square Wave Generator
+    //void squareWave(); // Square Wave Generator
+    
 };
 
-// class constrcutor 
-I2CDevice::I2CDevice(unsigned int bus, unsigned int device) {
-    printf("Constrcutor called\n");
+    // class constrcutor 
+I2CDevice::I2CDevice(unsigned int device) {
+    printf("Constrcutor called I2C Device Objetc Created\n");
     this->file = -1;
-    this->bus = bus;
     this->device = device;
     this->open();
+    this->registers = NULL;  
 }
-
 int I2CDevice::open() {
-    string name;
-    if (this->bus == 0) name = I2C_0;
-    else name = I2C_1;
-
-    //open the bus connection
-    if ((this->file = ::open(name.c_str(), O_RDWR)) < 0) {
+    //open the bus connection, Hardcoded  with "/dev/i2c-1",
+    if ((this->file = ::open("/dev/i2c-1", O_RDWR)) < 0) {
         perror("I2C: failed to open the bus\n");
         return 1;
     }
-    //open the connection toward the device e.g. ds3231 or 0x68
-    if (ioctl(this->file, I2C_SLAVE, this->device) < 0) {
+    //open the connection toward the device Hardcoded ds3231 or 0x68
+    if (ioctl(this->file, I2C_SLAVE, 0x68) < 0) {
         perror("I2C: Failed to connect to the device\n");
         return 1;
     }
@@ -160,7 +155,6 @@ unsigned char* I2CDevice::readRegisters(unsigned int number, unsigned int fromAd
         return NULL;
     }
     return data; // buffer
-
 }
 void I2CDevice::close() {
     ::close(this->file);
@@ -172,86 +166,59 @@ I2CDevice::~I2CDevice() {
     if (file != -1) this->close();
 }
 
+
+//Convert binary coded decimal to normal decimal numbers
+int I2CDevice::bcdToDec(char binValue) {return ((binValue / 16) * 10) + (binValue % 16);}
+// Convert decimal to binary coded decimal
+int I2CDevice::decTobcd(char decValue) {return (decValue / 10) * 16 + (decValue % 10);}
+
 //get methods
-int I2CDevice::getSeconds() {
-    return I2CDevice::readRegister(0x00);
+int I2CDevice::getSeconds() {return bcdToDec(I2CDevice::readRegister(0x00));}
+int I2CDevice::getMinutes() {return bcdToDec(I2CDevice::readRegister(0x01));}
+int I2CDevice::getHours() {return bcdToDec(I2CDevice::readRegister(0x02));}
+int I2CDevice::getDofWeek() {return bcdToDec(I2CDevice::readRegister(0x03));}
+int I2CDevice::getDateOfMonth() {return bcdToDec(I2CDevice::readRegister(0x04));}
+int I2CDevice::getMonth() {return bcdToDec(I2CDevice::readRegister(0x05));}
+int I2CDevice::getYear() {return bcdToDec(I2CDevice::readRegister(0x05));}
+void I2CDevice::getTimeDate(){
+    	printf("The RTC time is %02d:%02d:%02d\n", getHours(), getMinutes(), getSeconds());
+        printf("The RTC date is %02d/%02d/%02d\n", getDateOfMonth(), getMonth(), getYear());
 }
-int I2CDevice::getMinutes() {
-    return I2CDevice::readRegister(0x01);
+void I2CDevice::getTemperature() {
+    unsigned char msb = I2CDevice::readRegister(0x11);
+	unsigned char lsb = I2CDevice::readRegister(0x12);
+    float rtcTemperature = msb + ((lsb >> 6) * 0.25);
+    printf("The RTC Temperature is %f°C\n" , rtcTemperature);
 }
-int I2CDevice::getHours() {
-    return I2CDevice::readRegister(0x02);
-}
-int I2CDevice::getDateOfMonth() {
-    return I2CDevice::readRegister(0x04);
-}
-int I2CDevice::getMonth() {
-    return I2CDevice::readRegister(0x05);
-}
-int I2CDevice::getYear() {
-    return I2CDevice::readRegister(0x05);
-}
-// int I2CDevice::getTemp() {
-//     int tempFrac = 100 * (buf[18] >> 6) / 4; // Shift to extract upper 2 bits, temp is a frac of 100.
-//     printf("The Temperature is %02d.%02d\n", buf[17],
-//         tempFrac);
-//     return;
-// }
 
 //set methoods
-int I2CDevice::setSeconds(unsigned char value) {
-    return I2CDevice::writeRegister(0x00, decTobcd(value));
-}
-int I2CDevice::setMinutes(unsigned char value) {
-    return I2CDevice::writeRegister(0x01, decTobcd(value));
-}
-int I2CDevice::setHours(unsigned char value) {
-    return I2CDevice::writeRegister(0x02, decTobcd(value));
-}
-int I2CDevice::setDateOfMonth(unsigned char value) {
-    return I2CDevice::writeRegister(0x04, decTobcd(value));
-}
-int I2CDevice::setMonth(unsigned char value) {
-    return I2CDevice::writeRegister(0x05, decTobcd(value));
-}
-int I2CDevice::setYear(unsigned char value) {
-    return I2CDevice::writeRegister(0x06, decTobcd(value));
-}
+int I2CDevice::setSeconds(int value) {return I2CDevice::writeRegister(0x00, decTobcd(value));}
+int I2CDevice::setMinutes(int value) {return I2CDevice::writeRegister(0x01, decTobcd(value));}
+int I2CDevice::setHours(int value) {return I2CDevice::writeRegister(0x02, decTobcd(value));}
+int I2CDevice::setDofWeek(int value) {return I2CDevice::writeRegister(0x03, decTobcd(value));}
+int I2CDevice::setDateOfMonth(int value) {return I2CDevice::writeRegister(0x04, decTobcd(value));}
+int I2CDevice::setMonth(int value) {return I2CDevice::writeRegister(0x05, decTobcd(value));}
+int I2CDevice::setYear(int value) {return I2CDevice::writeRegister(0x06, decTobcd(value));}
 
 // int I2CDevice::setTimeDate(unsigned char value) {
-//     setSeconds(unsigned char value);
-//     setMinutes(unsigned char value);
-//     setHours(unsigned char value);
-//     setDateOfMonth(unsigned char value);
-//     setMonth(unsigned char value);
-//     setYear(unsigned char value);
+//     setSeconds(in);
+//     setMinutes(int;
+//     setHours(int;
+//     setDayOfW(int)
+//     setDateOfMonth(int);
+//     setMonth(int;
+//     setYear(int;
 // }
 
 int main() {
     printf("Starting the DS3231 test application\n");
     printf("------------------------------------\n");
 
-    I2CDevice rtc(1, 0x68);
-    //rtc.setHours(17);
-    rtc.getSeconds();
-    rtc.getMinutes();
-    rtc.getHours();
-    rtc.getDateOfMonth();
-    rtc.getMonth();
-    rtc.getYear();
-    char buf[BUFFER_SIZE];
-
-    // Reading the RTC time and date info , can be set as method (TBD)
-    printf("The RTC time is %02d:%02d:%02d\n", bcdToDec(buf[2]), bcdToDec(buf[1]), bcdToDec(buf[0]));
-    printf("The RTC date is %02d/%02d/%02d\n", bcdToDec(buf[3]), bcdToDec(buf[4]), bcdToDec(buf[5]), bcdToDec(buf[6]));
-
-    // Reading the RTC Alarms info , can be set as method (TBD)
-    printf("The RTC Alarm 1 time is %02d:%02d:%02d on %02d\n", bcdToDec(buf[9]), bcdToDec(buf[8]), bcdToDec(buf[7]), bcdToDec(buf[10]));
-    printf("The RTC Alarm 2 time is %02d:%02d on %02d\n", bcdToDec(buf[12]), bcdToDec(buf[11]), bcdToDec(buf[13]));
-
+    I2CDevice rtc(0x68);
+    rtc.readRegisters(BUFFER_SIZE,0x00);
+    rtc.getTimeDate();
+    rtc.getTemperature();
     rtc.close();
-    for (int i = 0; i < BUFFER_SIZE; i++) {
-        printf("%02x ", buf[i]);
-    }
+
     return 0;
 }
