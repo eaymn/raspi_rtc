@@ -40,7 +40,29 @@ using namespace std;
 #define ds3231_tempMSB 0x11
 #define ds3231_tempLSB 0x12
 
-//char used becuase of the 8 bits used in the register
+// Control bits info
+//control register 0Eh/8Eh
+// bit7 EOSC   Enable Oscillator (1 if oscillator must be stopped when on battery)
+// bit6 BBSQW  Battery Backed Square Wave
+// bit5 CONV   Convert temperature (1 forces a conversion NOW)
+// bit4 RS2    Rate select - frequency of square wave output
+// bit3 RS1    Rate select
+// bit2 INTCN  Interrupt control (1 for use of the alarms and to disable square wave on an alarm match condition)
+// bit1 A2IE   Alarm2 interrupt enable (1 to enable)
+// bit0 A1IE   Alarm1 interrupt enable (1 to enable)
+
+
+// SQUARE-WAVE OUTPUT FREQUENCY function preparation --> ongoingnot complet yet
+// Control Register (0Eh), Bits 4 and 3: Rate Select (RS2 and RS1). These bits control the frequency of the SQW output when
+// the SQW has been enabled using BBIT 2 (INTCN =0), These bits are both set to logic 1 (8.192kHz) when power is first applied
+// 
+// control register state (Bit7 - Bit0) --> 00011100
+//    ds3231_OFF = ,      // Off 
+//    ds3231_SQW1Hz = 0x00,   // 1Hz square wave   RS2_RS1 00
+//    ds3231_SQW1kHz = 0x08,  //  1kHz square wave RS2_RS1 01
+//    ds3231_SQW4kHz = 0x10,  //  4kHz square wave RS2_RS1 10
+//    ds3231_SQW8kHz = 0x18   //  8kHz square wave RS2_RS1 11
+//
 
 // Creating Main calss with main i2c device chacaterstics and menthods 
 class I2CDevice {
@@ -88,10 +110,12 @@ public:
     
     void getTemperature();
 
-    //void readAlarm1();
-    //void readAlaam2();
-    //void setAlaram1();
-    //void setAlaram2()
+    void getAlarm1();
+    void getAlarm2();
+
+    // work in progress ==>
+    //void setAlaram1(int, int, int, int);
+    //void setAlaram2(int, int, int);
 
     //void squareWave(); // Square Wave Generator
     
@@ -208,15 +232,40 @@ void I2CDevice::setTimeDate(int seconds, int minutes, int hours, int day, int mo
     setYear(years);
 }
 
+// Reading the RTC Alarm #1, registers 07h to 0Ah
+void I2CDevice::getAlarm1() {
+    char buffer[4];
+    buffer[0] = bcdToDec(I2CDevice::readRegister(0x0a)); // Day
+    buffer[1] = bcdToDec(I2CDevice::readRegister(0x09)); // Hours
+    buffer[2] = bcdToDec(I2CDevice::readRegister(0x08)); // Minutes
+    buffer[3] = bcdToDec(I2CDevice::readRegister(0x07)); // Seconds
+
+    printf("The RTC Alarm1 Time Is %02d:%02d:%02d", (buffer[1]), (buffer[2]), (buffer[3]));
+    printf(" The RTC Alarm1 Date is %02d\n", (buffer[0]));
+}
+
+// Reading the RTC Alarm #2, registers 0Bh to 0Dh 
+void I2CDevice::getAlarm2() {
+    char buffer[3];
+    buffer[0] = bcdToDec(I2CDevice::readRegister(0x0d)); // Day
+    buffer[1] = bcdToDec(I2CDevice::readRegister(0x0c)); // Hours
+    buffer[2] = bcdToDec(I2CDevice::readRegister(0xb8)); // Minutes
+
+    printf("The RTC Alarm2 Time Is %02d:%02d:%02d", (buffer[1]), (buffer[2]));
+    printf(" The RTC Alarm2 Date Is %02d\n", (buffer[0]));
+}
+
 int main() {
     printf("Starting the DS3231 test application\n");
     printf("------------------------------------\n");
 
     I2CDevice rtc(0x68);
     rtc.readRegisters(BUFFER_SIZE,0x00);
-    rtc.setTimeDate(00, 00, 02, 19, 02, 2022);
+    //rtc.setTimeDate(00, 00, 02, 19, 02, 2022);
     rtc.getTimeDate();
     rtc.getTemperature();
+    rtc.getAlarm1();
+    rtc.getAlarm2();
     rtc.close();
 
     return 0;
